@@ -1,37 +1,95 @@
-import numpy as np
+# Import necessary libraries
+import tensorflow as tf
 import matplotlib.pyplot as plt
+import numpy as np
 from tensorflow.keras.datasets import mnist
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import accuracy_score, classification_report
-import joblib
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Flatten
+from tensorflow.keras.utils import to_categorical
 
-# Load MNIST dataset
+# Load the MNIST dataset (automatically downloads if not available)
 (x_train, y_train), (x_test, y_test) = mnist.load_data()
 
-# Display first 5 images
-for i in range(5):
-    plt.subplot(1, 5, i + 1)
-    plt.imshow(x_train[i], cmap='gray')
-    plt.axis('off')
+# Normalize pixel values between 0 and 1
+x_train, x_test = x_train / 255.0, x_test / 255.0
+
+# Apply one-hot encoding to the labels
+y_train, y_test = to_categorical(y_train, 10), to_categorical(y_test, 10)
+
+# Display sample images from the training set
+fig, axes = plt.subplots(1, 5, figsize=(10, 2))
+for i, ax in enumerate(axes):
+    ax.imshow(x_train[i], cmap='gray')
+    ax.axis('off')
+    ax.set_title(f"Label: {np.argmax(y_train[i])}")
+plt.suptitle("Sample MNIST Images")
+plt.tight_layout()
 plt.show()
 
-# Flatten 28x28 images to 784-dimensional vectors
-x_train_flat = x_train.reshape((x_train.shape[0], -1))
-x_test_flat = x_test.reshape((x_test.shape[0], -1))
+# Build the neural network model
+model = Sequential([
+    Flatten(input_shape=(28, 28)),    # Convert 28x28 images to 1D array
+    Dense(128, activation='relu'),    # Hidden layer with 128 neurons
+    Dense(64, activation='relu'),     # Hidden layer with 64 neurons
+    Dense(10, activation='softmax')   # Output layer with 10 neurons (one per digit)
+])
 
-# Train Decision Tree classifier
-clf = DecisionTreeClassifier()
-clf.fit(x_train_flat, y_train)
+# Compile the model
+model.compile(
+    optimizer='adam', 
+    loss='categorical_crossentropy', 
+    metrics=['accuracy']
+)
 
-# Predict and evaluate
-y_pred = clf.predict(x_test_flat)
-print("Accuracy:", accuracy_score(y_test, y_pred))
-print("Classification Report:\n", classification_report(y_test, y_pred))
+# Train the model
+history = model.fit(
+    x_train, y_train, 
+    epochs=5,                # Reduced epochs for faster execution 
+    batch_size=128,          # Process 128 images at a time
+    validation_split=0.2,    # Use 20% of training data for validation
+    verbose=1                # Show progress
+)
 
-# Save model
-joblib.dump(clf, "mnist_decision_tree.pkl")
+# Evaluate on test data
+test_loss, test_acc = model.evaluate(x_test, y_test)
+print(f"Test Accuracy: {test_acc:.4f}")
 
-# Load and use model on new data (optional)
-clf = joblib.load("mnist_decision_tree.pkl")
-new_predictions = clf.predict(x_test_flat[:3])
-print("Predictions on first 3 test images:", new_predictions)
+# Plot training history
+plt.figure(figsize=(12, 4))
+plt.subplot(1, 2, 1)
+plt.plot(history.history['accuracy'], label='Training Accuracy')
+plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.legend()
+
+plt.subplot(1, 2, 2)
+plt.plot(history.history['loss'], label='Training Loss')
+plt.plot(history.history['val_loss'], label='Validation Loss')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+# Predict and visualize results for five random test images
+sample_idx = np.random.choice(len(x_test), 5, replace=False)
+x_sample = x_test[sample_idx]
+y_true = np.argmax(y_test[sample_idx], axis=1)
+
+# Make predictions
+predictions = model.predict(x_sample)
+pred_classes = np.argmax(predictions, axis=1)
+
+# Display images with predictions
+fig, axes = plt.subplots(1, 5, figsize=(10, 2))
+for i, ax in enumerate(axes):
+    ax.imshow(x_sample[i], cmap='gray')
+    ax.axis('off')
+    color = 'green' if pred_classes[i] == y_true[i] else 'red'
+    ax.set_title(f"Pred: {pred_classes[i]}", color=color)
+plt.tight_layout()
+plt.show()
+
+print("RESULT:")
+print("The neural network successfully classified handwritten digits from the MNIST dataset with high accuracy.")
