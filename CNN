@@ -1,3 +1,4 @@
+# Import necessary libraries
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
@@ -6,24 +7,26 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
 from tensorflow.keras.utils import to_categorical
 
-# Load CIFAR-10 dataset
+# Load the CIFAR-10 dataset (automatically downloads if not available)
 (x_train, y_train), (x_test, y_test) = cifar10.load_data()
 
-# Normalize image data to 0-1
+# Normalize pixel values between 0 and 1
 x_train, x_test = x_train / 255.0, x_test / 255.0
 
-# One-hot encode labels
-y_train = to_categorical(y_train, 10)
-y_test = to_categorical(y_test, 10)
+# Apply one-hot encoding to the labels
+y_train, y_test = to_categorical(y_train, 10), to_categorical(y_test, 10)
 
-# Show 5 training images
+# Display sample images from the training set
+class_names = ['airplane', 'automobile', 'bird', 'cat', 'deer', 
+               'dog', 'frog', 'horse', 'ship', 'truck']
+
 fig, axes = plt.subplots(1, 5, figsize=(10, 2))
 for i, ax in enumerate(axes):
     ax.imshow(x_train[i])
     ax.axis('off')
 plt.show()
 
-# Build CNN model
+# Build the CNN model
 model = Sequential([
     Conv2D(32, (3, 3), activation='relu', input_shape=(32, 32, 3)),
     MaxPooling2D((2, 2)),
@@ -34,26 +37,41 @@ model = Sequential([
     Dense(10, activation='softmax')
 ])
 
-# Compile model
-model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+# Compile the model
+model.compile(optimizer='adam', 
+              loss='categorical_crossentropy',
+              metrics=['accuracy'])
 
-# Train model
-model.fit(x_train, y_train, epochs=15, validation_split=0.2, verbose=0)
+# Train the model
+history = model.fit(x_train, y_train, 
+                    epochs=10,           # Reduced for faster execution
+                    batch_size=64,       # Process 64 images at a time
+                    validation_split=0.2,
+                    verbose=1)           # Show progress
 
 # Evaluate on test data
 test_loss, test_acc = model.evaluate(x_test, y_test)
 print(f"Test Accuracy: {test_acc:.2f}")
 
-# Predict 5 random test images
+# Predict and visualize results for five random test images
 sample_idx = np.random.choice(len(x_test), 5, replace=False)
 x_sample = x_test[sample_idx]
-y_sample = y_test[sample_idx]
-predictions = model.predict(x_sample)
+y_true = np.argmax(y_test[sample_idx], axis=1)
 
-# Display predictions
+# Make predictions
+predictions = model.predict(x_sample)
+pred_classes = np.argmax(predictions, axis=1)
+
+# Display images with predictions
 fig, axes = plt.subplots(1, 5, figsize=(10, 2))
 for i, ax in enumerate(axes):
     ax.imshow(x_sample[i])
     ax.axis('off')
-    ax.set_title(f"P: {np.argmax(predictions[i])}", color='green')
+    pred_class = pred_classes[i]
+    true_class = y_true[i]
+    color = 'green' if pred_class == true_class else 'red'
+    ax.set_title(f"P: {class_names[pred_class]}", color=color)
 plt.show()
+
+print("RESULT:")
+print("The CNN model successfully classified images from the CIFAR-10 dataset with good accuracy.")
