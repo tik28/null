@@ -1,39 +1,68 @@
+# Import necessary libraries
 import pandas as pd
-import os
-from sklearn.datasets import load_iris
+import numpy as np
+import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeClassifier, plot_tree
 from sklearn.metrics import accuracy_score, classification_report
-import matplotlib.pyplot as plt
 import joblib
+import os
+from sklearn import datasets
 
-if not os.path.exists("iris.csv"):
-    iris = load_iris()
-    df = pd.DataFrame(data=iris.data, columns=['SepalLengthCm', 'SepalWidthCm', 'PetalLengthCm', 'PetalWidthCm'])
-    df['Species'] = pd.Categorical.from_codes(iris.target, iris.target_names)
-    df.to_csv("iris.csv", index=False)
-else:
+# Load or download the Iris dataset
+if os.path.exists("iris.csv"):
     df = pd.read_csv("iris.csv")
+else:
+    # Download from sklearn
+    iris = datasets.load_iris()
+    
+    # Convert to DataFrame
+    df = pd.DataFrame(data=iris.data, columns=iris.feature_names)
+    
+    # Add species column
+    species_names = {0: 'Iris-setosa', 1: 'Iris-versicolor', 2: 'Iris-virginica'}
+    df['Species'] = [species_names[i] for i in iris.target]
+    
+    # Rename columns to match expected format
+    df = df.rename(columns={
+        'sepal length (cm)': 'SepalLengthCm',
+        'sepal width (cm)': 'SepalWidthCm',
+        'petal length (cm)': 'PetalLengthCm',
+        'petal width (cm)': 'PetalWidthCm'
+    })
+    
+    # Save to CSV
+    df.to_csv("iris.csv", index=False)
 
+# Display dataset information
 print(df.head())
 print(df.describe())
 print(df.isnull().sum())
 
+# Separate features and target
 X = df.drop('Species', axis=1)
 y = df['Species']
+
+# Split data
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
+# Initialize and train Decision Tree Classifier
 dt_model = DecisionTreeClassifier(random_state=42)
 dt_model.fit(X_train, y_train)
 
+# Predict and evaluate
 y_pred = dt_model.predict(X_test)
 accuracy = accuracy_score(y_test, y_pred)
 print(f'Accuracy: {accuracy}')
 print(classification_report(y_test, y_pred))
 
+# Save the model
 joblib.dump(dt_model, 'iris_decision_tree.pkl')
+
+# Load the saved model
 dt_model = joblib.load('iris_decision_tree.pkl')
 
+# Make predictions on new data
 new_data = pd.DataFrame({
     'SepalLengthCm': [5.1, 6.2, 4.7],
     'SepalWidthCm': [3.5, 3.4, 3.2],
@@ -42,10 +71,11 @@ new_data = pd.DataFrame({
 })
 
 predictions = dt_model.predict(new_data)
+print("Predictions:")
 for pred in predictions:
     print(pred)
 
+# Visualize the Decision Tree
 plt.figure(figsize=(12, 8))
-plot_tree(dt_model, feature_names=list(X.columns),
-          class_names=df['Species'].unique().tolist(), filled=True)
+plot_tree(dt_model, feature_names=list(X.columns), class_names=sorted(list(set(y))), filled=True)
 plt.show()
