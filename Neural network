@@ -1,0 +1,37 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from tensorflow.keras.datasets import mnist
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score, classification_report
+import joblib
+
+# Load MNIST dataset
+(x_train, y_train), (x_test, y_test) = mnist.load_data()
+
+# Display first 5 images
+for i in range(5):
+    plt.subplot(1, 5, i + 1)
+    plt.imshow(x_train[i], cmap='gray')
+    plt.axis('off')
+plt.show()
+
+# Flatten 28x28 images to 784-dimensional vectors
+x_train_flat = x_train.reshape((x_train.shape[0], -1))
+x_test_flat = x_test.reshape((x_test.shape[0], -1))
+
+# Train Decision Tree classifier
+clf = DecisionTreeClassifier()
+clf.fit(x_train_flat, y_train)
+
+# Predict and evaluate
+y_pred = clf.predict(x_test_flat)
+print("Accuracy:", accuracy_score(y_test, y_pred))
+print("Classification Report:\n", classification_report(y_test, y_pred))
+
+# Save model
+joblib.dump(clf, "mnist_decision_tree.pkl")
+
+# Load and use model on new data (optional)
+clf = joblib.load("mnist_decision_tree.pkl")
+new_predictions = clf.predict(x_test_flat[:3])
+print("Predictions on first 3 test images:", new_predictions)
